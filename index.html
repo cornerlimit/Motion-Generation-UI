@@ -502,9 +502,9 @@ const S={
     vid:null,queue:[],qId:1,currentTask:null,
 };
 
+// Always show terms popup on every visit (demo mode)
 (function init(){
-    if(localStorage.getItem('mg_v4_terms')==='true'){S.termsOK=true;S.firstVisitDone=true}
-    else setTimeout(()=>showOv('termsModal'),400)
+    setTimeout(()=>showOv('termsModal'),400)
 })();
 
 // ==================== Tab ====================
@@ -626,7 +626,7 @@ function bgSim(tid){
 function showOv(id){document.getElementById(id).classList.add('show')}
 function hideOv(id){document.getElementById(id).classList.remove('show')}
 
-function acceptTerms(){S.termsOK=true;S.firstVisitDone=true;localStorage.setItem('mg_v4_terms','true');hideOv('termsModal');toast('创作者须知已确认','success')}
+function acceptTerms(){S.termsOK=true;S.firstVisitDone=true;hideOv('termsModal');toast('创作者须知已确认','success')}
 function openHelpModal(){document.getElementById('helpModal').classList.add('show')}
 function closeHelpModal(){document.getElementById('helpModal').classList.remove('show')}
 

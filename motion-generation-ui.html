@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion Generation</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    background:#1a1d23;color:#e0e0e0;min-height:100vh;overflow-x:hidden
+}
+:root{
+    --bg1:#1a1d23;--bg2:#23262e;--bg3:#2b2f38;--bgH:#333842;
+    --bd:#3a3f4a;--t1:#fff;--t2:#9ca3af;
+    --gold:#d4a853;--blue:#5b9cf5;--ok:#4ade80;--warn:#f59e0b;--err:#ef4444;
+}
+.app{max-width:1200px;margin:0 auto;padding:20px 32px;min-height:100vh;display:flex;flex-direction:column}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 0 24px;border-bottom:1px solid var(--bd);margin-bottom:28px;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:16px}
+.back-btn{width:36px;height:36px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.back-btn:hover{background:var(--bgH);color:var(--t1)}
+.page-title{font-size:22px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t1)}
+.library-btn{display:flex;align-items:center;gap:8px;padding:8px 20px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:13px;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:.2s}
+.library-btn:hover{background:var(--bgH);color:var(--t1)}
+
+/* Tabs */
+.tab-bar{display:flex;gap:12px;margin-bottom:24px;flex-shrink:0}
+.tab-btn{padding:10px 24px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--t2);font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:.25s}
+.tab-btn:hover{color:var(--t1);background:var(--bg3)}
+.tab-btn.active{background:var(--bg3);color:var(--t1);border-color:#555;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* Main */
+.main-content{flex:1;display:flex;flex-direction:column;gap:20px}
+
+/* Input Section */
+.input-section{display:flex;flex-direction:column;gap:10px}
+.section-label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)}
+.help-icon{
+    width:26px;height:26px;border-radius:50%;
+    background:var(--gold);color:#1a1d23;
+    font-size:13px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:.2s;flex-shrink:0;border:none;
+    box-shadow:0 0 0 3px rgba(212,168,83,.25);
+}
+.help-icon:hover{transform:scale(1.15);box-shadow:0 0 0 6px rgba(212,168,83,.35)}
+.history-icon{width:24px;height:24px;border-radius:6px;border:1px solid var(--bd);background:var(--bg3);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;font-size:12px}
+.history-icon:hover{background:var(--bgH);color:var(--t1)}
+
+/* Prompt (TEXT mode) */
+.prompt-input-wrapper{position:relative;border-radius:12px;border:1px solid var(--bd);background:var(--bg3);overflow:hidden;transition:border-color .2s}
+.prompt-input-wrapper:focus-within{border-color:var(--blue)}
+.prompt-textarea{width:100%;min-height:160px;padding:20px 48px 20px 20px;border:none;background:transparent;color:var(--t1);font-size:15px;line-height:1.7;resize:vertical;outline:none;font-family:inherit}
+.prompt-textarea::placeholder{color:#555c68}
+.edit-icon-btn{position:absolute;right:16px;bottom:16px;width:32px;height:32px;border-radius:6px;border:none;background:transparent;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.edit-icon-btn:hover{color:var(--t1);background:rgba(255,255,255,.05)}
+
+/* Video Upload (VIDEO mode) */
+.video-upload-area{border:2px dashed var(--bd);border-radius:12px;padding:70px 40px;text-align:center;cursor:pointer;transition:.25s;background:rgba(43,47,56,.4)}
+.video-upload-area:hover{border-color:var(--blue);background:rgba(91,156,245,.06)}
+.video-upload-area.ready{border-color:var(--ok);border-style:solid;background:rgba(74,222,128,.06)}
+.video-upload-icon{font-size:52px;opacity:.45;margin-bottom:14px}
+.video-upload-text{font-size:15px;font-weight:600;color:var(--t2);margin-bottom:6px}
+.video-upload-hint{font-size:13px;color:#555}
+.upload-ready-badge{display:none;margin-top:14px;padding:10px 18px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:8px;font-size:13px;color:var(--ok);font-weight:600;text-align:center}
+.upload-ready-badge.show{display:block}
+
+#textSection.hidden,#videoSection.hidden{display:none!important}
+
+/* Footer */
+.footer-bar{display:flex;align-items:center;justify-content:space-between;padding-top:8px;flex-shrink:0}
+.footer-left{display:flex;align-items:center}
+.queue-btn{display:flex;align-items:center;gap:8px;padding:11px 22px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:.2s}
+.queue-btn:hover{background:var(--bgH);color:var(--t1)}
+.queue-count{background:var(--gold);color:#1a1d23;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;min-width:22px;text-align:center}
+.uid-display{font-size:10px;color:#444;margin-left:6px}
+
+.gen-btn-footer{
+    padding:12px 40px;border-radius:8px;border:1px solid #444;
+    background:linear-gradient(135deg,#3a3f47,#2d3340);
+    color:#666;font-size:14px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    cursor:not-allowed;transition:.3s;display:flex;align-items:center;gap:8px
+}
+.gen-btn-footer.ready{background:linear-gradient(135deg,#4a5568,#374151);color:var(--t1);border-color:#555;cursor:pointer}
+.gen-btn-footer.ready:hover{background:linear-gradient(135deg,#5a6578,#475156);transform:translateY(-1px);box-shadow:0 4px 15px rgba(0,0,0,.3)}
+
+/* ===== Loading Overlay (5 sec) ===== */
+.loading-overlay{
+    position:fixed;inset:0;background:rgba(26,29,35,.96);backdrop-filter:blur(6px);
+    z-index:1500;display:none;flex-direction:column;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .4s
+}
+.loading-overlay.show{display:flex;opacity:1}
+.loading-icon{font-size:64px;margin-bottom:18px;animation:bounce 1.2s ease-in-out infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.loading-percent{font-size:18px;font-weight:700;color:var(--t1);margin-bottom:14px;letter-spacing:1px}
+.loading-bar-wrap{width:360px;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;margin-bottom:28px}
+.loading-bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .05s linear;width:0%}
+.bg-btn{padding:12px 48px;border-radius:8px;border:none;background:var(--gold);color:#1a1d23;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s}
+.bg-btn:hover{background:#c99a45;transform:scale(1.03);box-shadow:0 4px 20px rgba(212,168,83,.3)}
+
+/* ===== Help Modal (?) button) ===== */
+.help-modal{
+    position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+    z-index:1400;display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .3s
+}
+.help-modal.show{display:flex;opacity:1}
+.help-card{
+    background:var(--bg2);border:1px solid var(--bd);border-radius:16px;
+    padding:32px;max-width:560px;width:92%;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);animation:modalIn .3s ease-out;position:relative
+}
+@keyframes modalIn{from{transform:scale(.94)translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.help-close{
+    position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:6px;
+    border:1px solid var(--bd);background:var(--bg3);color:var(--t2);
+    font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s
+}
+.help-close:hover{background:var(--bgH);color:var(--err)}
+.help-title{font-size:17px;font-weight:700;color:var(--t1);margin-bottom:16px;padding-right:36px}
+.help-body{font-size:14px;line-height:1.9;color:var(--t2)}
+.help-body p{margin-bottom:10px}
+.help-body ol{list-style:decimal;padding-left:22px;margin:6px 0}
+.help-body li{margin-bottom:7px}
+.help-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--bd)}
+.help-section-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:8px;letter-spacing:.5px}
+.tips-list{list-style:'✓  ';padding-left:4px!important}
+.tips-list li{padding-left:8px;margin-bottom:5px}
+
+/* ===== Queue Panel ===== */
+.queue-panel{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:var(--bg1);z-index:1600;
+    display:none;flex-direction:column;opacity:0;transition:opacity .3s
+}
+.queue-panel.show{display:flex;opacity:1}
+.queue-panel-header{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--bd)}
+.queue-panel-title{display:flex;align-items:center;gap:14px}
+.qp-back{width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg2);color:var(--t2);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.qp-back:hover{background:var(--bgH);color:var(--t1)}
+.qp-heading{font-size:20px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t1)}
+.qp-counter{font-size:14px;font-weight:700;color:var(--gold);background:rgba(212,168,83,.1);padding:4px 12px;border-radius:6px}
+.queue-panel-body{flex:1;overflow-y:auto;padding:28px 32px}
+.q-item{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:18px 22px;margin-bottom:14px;display:flex;align-items:center;gap:18px;transition:.2s}
+.q-item:hover{border-color:#555}
+.q-thumb{width:72px;height:72px;border-radius:10px;background:var(--bg3);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0}
+.q-info{flex:1;min-width:0}
+.q-type-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.q-badge{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--gold)}
+.q-detail-link{font-size:11px;color:#555;cursor:pointer}
+.q-desc{font-size:13px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.q-time{font-size:11px;color:#555}
+.q-progress-col{width:180px;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.q-pbar{width:100%;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.q-pfill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .5s;width:0%}
+.q-pct{font-size:12px;font-weight:600;color:var(--t2)}
+.q-actions{display:flex;gap:8px;flex-shrink:0}
+.q-action-btn{padding:9px 22px;border-radius:7px;border:1px solid var(--bd);font-size:12px;font-weight:700;cursor:pointer;transition:.2s;text-transform:uppercase;letter-spacing:.5px}
+.q-del{background:transparent;color:var(--t2)}
+.q-del:hover{color:var(--err);border-color:var(--err);background:rgba(239,68,68,.08)}
+.q-prev{background:transparent;color:var(--gold);border-color:var(--gold)}
+.q-prev:hover{background:rgba(212,168,83,.12);color:var(--gold)}
+
+/* ===== Generate Preview Page (full page, reference layout) ===== */
+.preview-page{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:#2a2e36;z-index:1700;
+    display:none;flex-direction:column;
+    opacity:0;transition:opacity .3s;
+}
+.preview-page.show{display:flex;opacity:1}
+.pp-header{
+    display:flex;align-items:center;gap:16px;
+    padding:16px 28px;flex-shrink:0;
+}
+.pp-back{
+    width:34px;height:34px;border-radius:6px;
+    border:1px solid #444;background:#23262e;color:#ccc;
+    font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:.2s;flex-shrink:0;
+}
+.pp-back:hover{background:#333842;color:#fff}
+.pp-title{font-size:20px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#fff}
+.pp-body{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    padding:24px 48px;
+}
+.pp-viewport{
+    width:min(960px,88vw);aspect-ratio:16/9;
+    border-radius:6px;overflow:hidden;
+    /* Sky blue gradient background simulating the character preview */
+    background:
+        linear-gradient(180deg,
+            #4eb8e8 0%,
+            #6ecff3 30%,
+            #89ddf5 50%,
+            #a8edfb 70%,
+            #c5f3fc 85%,
+            #e0f6fd 100%
+        );
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+    box-shadow:0 4px 30px rgba(0,0,0,.3);
+}
+/* Simulated character silhouette */
+.pp-char{
+    width:80px;height:180px;
+    background:linear-gradient(180deg,#7ec850,#3a8a2e,#2a6b22);
+    border-radius:40px 40px 20px 20px;
+    position:relative;
+    box-shadow:0 4px 20px rgba(0,0,0,.15);
+}
+.pp-char::before{/* head */
+    content:'';position:absolute;top:-38px;left:50%;transform:translateX(-50%);
+    width:36px;height:36px;border-radius:50%;
+    background:linear-gradient(135deg,#ffe4c4,#f0c8a0);
+    border:2px solid rgba(255,220,196,.5);
+}
+.pp-char::after{/* arms */
+    content:'';position:absolute;top:20px;left:-18px;width:136px;height:18px;
+    border-radius:9px;background:linear-gradient(90deg,#5cb840,#3a8a2e);
+}
+/* Ground plane hint */
+.pp-ground{
+    position:absolute;bottom:0;left:0;right:0;height:35%;
+    background:linear-gradient(180deg,rgba(168,237,251,.3),rgba(197,243,252,.6));
+}
+.pp-footer{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 28px;flex-shrink:0;
+}
+.pp-uid{font-size:10px;color:#666}
+.pp-addlib{
+    padding:12px 28px;border-radius:6px;border:none;
+    background:var(--gold);color:#1a1d23;
+    font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    cursor:pointer;transition:.2s;
+}
+.pp-addlib:hover{background:#c99a45;transform:translateY(-1px);box-shadow:0 4px 16px rgba(212,168,83,.3)}
+
+/* ===== SAVE Modal (Add To Library) ===== */
+.save-modal-overlay{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(4px);
+    z-index:1850;display:none;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .3s;
+}
+.save-modal-overlay.show{display:flex;opacity:1}
+.save-modal-card{
+    background:#333842;
+    border:1px solid #4a4f5a;
+    border-radius:10px;
+    padding:36px 44px;max-width:420px;width:92%;
+    text-align:center;position:relative;
+    animation:modalIn .3s ease-out;
+}
+.save-close{
+    position:absolute;top:12px;right:14px;width:28px;height:28px;border-radius:6px;
+    border:1px solid #4a4f4a;background:#2b2f38;color:#888;
+    font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s
+}
+.save-close:hover{background:#3a3f4a;color:#fff}
+.save-title{
+    font-size:24px;font-weight:800;letter-spacing:3px;text-transform:uppercase;
+    color:#fff;margin-bottom:24px;
+}
+.save-input-wrap{
+    position:relative;margin-bottom:24px;
+}
+.save-input{
+    width:100%;padding:12px 40px 12px 16px;
+    border-radius:8px;border:1px solid #4a4f4a;
+    background:#2b2f38;color:#e0e0e0;font-size:14px;
+    outline:none;transition:border-color .2s;font-family:inherit;
+}
+.save-input:focus{border-color:var(--gold)}
+.save-input::placeholder{color:#666}
+.save-edit-icon{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    color:#888;font-size:16px;pointer-events:none;
+}
+.save-confirm-btn{
+    padding:12px 56px;border-radius:6px;border:none;
+    background:var(--gold);color:#1a1d23;
+    font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    cursor:pointer;transition:.2s;
+}
+.save-confirm-btn:hover{background:#c99a45;transform:scale(1.02);box-shadow:0 4px 16px rgba(212,168,83,.3)}
+
+/* ===== Floating Success Text (飘字 - top of page) ===== */
+.float-success{
+    position:fixed;left:50%;top:9%;
+    transform:translateX(-50%) translateY(0);
+    z-index:1900;pointer-events:none;
+    display:flex;align-items:center;justify-content:center;
+    animation:floatUpTop 2.2s ease-out forwards;
+}
+.float-inner{
+    background:linear-gradient(135deg,#0d4f5c,#1a7a8a);
+    border:2px solid #2dd4d8;border-radius:10px;
+    padding:16px 52px;
+    box-shadow:0 8px 40px rgba(45,212,216,.35),0 0 60px rgba(45,212,216,.15),inset 0 1px 0 rgba(255,255,255,.1);
+}
+.float-text{
+    font-size:26px;font-weight:900;letter-spacing:3px;text-transform:uppercase;
+    color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.5);white-space:nowrap
+}
+@keyframes floatUpTop{
+    0%{opacity:0;transform:translateX(-50%) translateY(-16px) scale(.85)}
+    12%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+    65%{opacity:1;transform:translateX(-50%) translateY(-12px) scale(1)}
+    100%{opacity:0;transform:translateX(-50%) translateY(-80px) scale(.95)}
+}
+
+/* Toast */
+.toast-container{position:fixed;top:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:10px}
+.toast{padding:14px 20px;border-radius:10px;background:var(--bg2);border:1px solid var(--bd);color:var(--t1);font-size:13px;font-weight:500;box-shadow:0 10px 35px rgba(0,0,0,.4);animation:toastIn .3s ease;display:flex;align-items:center;gap:10px;min-width:260px}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.toast.removing{animation:toastOut .3s ease-in forwards}
+@keyframes toastOut{from{opacity:1;transform:none}to{opacity:0;transform:translateX(40px)}}
+.toast-icon{font-size:16px;flex-shrink:0}
+.toast.success{border-left:3px solid var(--ok)}.toast.error{border-left:3px solid var(--err)}.toast.info{border-left:3px solid var(--blue)}
+@media(max-width:768px){
+    .app{padding:16px}.header{flex-direction:column;gap:12px;align-items:flex-start}
+    .footer-bar{flex-direction:column-reverse;gap:12px;align-items:stretch}
+    .gen-btn-footer{width:100%;justify-content:center}
+    .q-item{flex-wrap:wrap}.q-progress-col{width:100%;order:3;margin-top:8px}
+    .pp-footer{flex-direction:column-reverse;gap:10px;align-items:stretch}.pp-addlib{width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- Header -->
+<div class="header">
+    <div class="header-left">
+        <button class="back-btn" onclick="toast('返回上一页','info')">◀</button>
+        <h1 class="page-title">MOTION GENERATION</h1>
+    </div>
+    <button class="library-btn" onclick="toast('打开素材库','info')">📚 LIBRARY</button>
+</div>
+
+<!-- Tabs -->
+<div class="tab-bar">
+    <button class="tab-btn active" data-tab="text" onclick="switchTab(this)">TEXT-BASED GEN</button>
+    <button class="tab-btn" data-tab="video" onclick="switchTab(this)">VIDEO-BASED GEN</button>
+</div>
+
+<!-- Main -->
+<div class="main-content">
+
+    <!-- TEXT MODE: Prompt -->
+    <div class="input-section" id="textSection">
+        <div class="section-label">
+            ENTER A PROMPT
+            <button class="history-icon" onclick="toast('历史记录开发中...','info')">📋</button>
+        </div>
+        <div class="prompt-input-wrapper">
+            <textarea class="prompt-textarea" id="promptInput" placeholder="Enter prompt here..."></textarea>
+            <button class="edit-icon-btn" onclick="document.getElementById('promptInput').focus()">✏️</button>
+        </div>
+    </div>
+
+    <!-- VIDEO MODE: Upload -->
+    <div class="input-section hidden" id="videoSection">
+        <div class="section-label">
+            UPLOAD A VIDEO
+            <button class="help-icon" onclick="openHelpModal()" title="上传帮助">?</button>
+        </div>
+        <div class="video-upload-area" id="uploadArea" onclick="triggerUpload()">
+            <div class="video-upload-icon">🎬</div>
+            <div class="video-upload-text" id="uploadText">点击上传视频文件</div>
+            <div class="video-upload-hint">支持 MP4 格式，最大不超过 200MB，时长不超过 20 秒</div>
+        </div>
+        <input type="file" id="vFileInput" accept=".mp4" style="display:none" onchange="onFilePick(event)">
+        <div class="upload-ready-badge" id="readyBadge">✅ 视频已准备就绪 — 点击「开始生成」提交</div>
+    </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer-bar">
+    <div class="footer-left">
+        <button class="queue-btn" onclick="openQueuePanel()">
+            🔄 GENERATION QUEUE
+            <span class="queue-count" id="queueCount">0</span>
+        </button>
+        <span class="uid-display">UID:1231231</span>
+    </div>
+    <button class="gen-btn-footer" id="genBtn" onclick="onGenClick(this)">▶ 开始生成</button>
+</div>
+
+</div><!-- end app -->
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-icon">🤖</div>
+    <div class="loading-percent" id="loadingPct">Import... 0%</div>
+    <div class="loading-bar-wrap"><div class="loading-bar-fill" id="loadingBar"></div></div>
+    <button class="bg-btn" id="bgBtn" onclick="sendToBackground()">BACKGROUND</button>
+</div>
+
+<!-- Help Modal (?) button) -->
+<div class="help-modal" id="helpModal">
+    <div class="help-card">
+        <button class="help-close" onclick="closeHelpModal()">✕</button>
+        <div class="help-title">📹 上传视频说明</div>
+        <div class="help-body">
+            <ol>
+                <li>玩家可以选择自己喜欢的内容上传，我们会识别视频中的人物动作，转化为游戏人物可用的动作</li>
+                <li>输入视频后，玩家可以继续进行创作或在游戏中游玩，勿需停留在此界面</li>
+                <li>生成后的动作，可用于技能 UGC 编辑，或在地图中放置 AI Post Device 来展示</li>
+            </ol>
+            <div class="help-section">
+                <div class="help-section-title">【推荐视频格式】</div>
+                <ul class="tips-list">
+                    <li>镜头保持稳定且单一，不要多镜头视频</li>
+                    <li>单人视频效果最佳</li>
+                    <li>视频中人物的四肢尽量清晰，同时人物在视频过程中不要离开屏幕</li>
+                    <li>视频时长控制在 20 秒以内</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Queue Panel -->
+<div class="queue-panel" id="queuePanel">
+    <div class="queue-panel-header">
+        <div class="queue-panel-title">
+            <button class="qp-back" onclick="closeQueuePanel()">◀</button>
+            <span class="qp-heading">GENERATION QUEUE</span>
+        </div>
+        <span class="qp-counter" id="qpCounter">0 / 0</span>
+    </div>
+    <div class="queue-panel-body" id="qpBody"></div>
+</div>
+
+<!-- ========== GENERATE PREVIEW PAGE (full-page, reference layout) ========== -->
+<div class="preview-page" id="previewPage">
+    <div class="pp-header">
+        <button class="pp-back" onclick="closePreviewPage()">◀</button>
+        <span class="pp-title">GENERATE PREVIEW</span>
+    </div>
+    <div class="pp-body">
+        <div class="pp-viewport">
+            <!-- simulated character on sky background -->
+            <div class="pp-ground"></div>
+            <div class="pp-char"></div>
+        </div>
+    </div>
+    <div class="pp-footer">
+        <span class="pp-uid">UID:1231231</span>
+        <button class="pp-addlib" onclick="openSaveModal()">ADD TO LIBRARY</button>
+    </div>
+</div>
+
+<!-- ========== SAVE MODAL (Add To Library) ========== -->
+<div class="save-modal-overlay" id="saveModalOverlay">
+    <div class="save-modal-card">
+        <button class="save-close" onclick="closeSaveModal()">✕</button>
+        <div class="save-title">SAVE</div>
+        <div class="save-input-wrap">
+            <input type="text" class="save-input" id="saveNameInput" placeholder="ENTER ACTION NAME" maxlength="64">
+            <span class="save-edit-icon">✏️</span>
+        </div>
+        <button class="save-confirm-btn" onclick="confirmSave()">CONFIRM</button>
+    </div>
+</div>
+
+<!-- 创作者须知 (first visit) -->
+<div class="help-modal" id="termsModal" style="z-index:1800">
+    <div class="help-card">
+        <button class="help-close" onclick="acceptTerms()">✕</button>
+        <div class="help-title">创作者须知</div>
+        <div class="help-body">
+            <p>欢迎使用动作生成功能，请你仔细阅读以下内容，并确认是否同意：</p>
+            <ol>
+                <li>请遵守中华人民共和国法律条款，不要上传违法的视频内容</li>
+                <li>腾讯公司不会收集您使用本服务所提供及产生的信息，作为训练数据使用</li>
+            </ol>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">
+            <button class="bg-btn" style="padding:10px 32px;font-size:13px" onclick="acceptTerms()">我已了解并同意</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ==================== State ====================
+const S={
+    tab:'text',termsOK:false,firstVisitDone:false,
+    vid:null,queue:[],qId:1,currentTask:null,
+};
+
+(function init(){
+    if(localStorage.getItem('mg_v4_terms')==='true'){S.termsOK=true;S.firstVisitDone=true}
+    else setTimeout(()=>showOv('termsModal'),400)
+})();
+
+// ==================== Tab ====================
+function switchTab(b){
+    document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    S.tab=b.dataset.tab;
+    document.getElementById('textSection').classList.toggle('hidden',S.tab!=='text');
+    document.getElementById('videoSection').classList.toggle('hidden',S.tab!=='video');
+    evalGenBtn();
+    toast(S.tab==='text'?'已切换到文本模式':'已切换到视频模式','info')
+}
+
+// ==================== Video Upload ====================
+function triggerUpload(){document.getElementById('vFileInput').click()}
+function onFilePick(e){
+    const f=e.target.files[0];if(!f)return;
+    if(!f.name.toLowerCase().endsWith('.mp4')){toast('仅支持 MP4 格式','error');clearVid();return}
+    if(f.size>200*1024*1024){toast('文件超过 200MB 限制','error');clearVid();return}
+    S.vid=f;
+    const area=document.getElementById('uploadArea');area.classList.add('ready');
+    document.getElementById('uploadText').textContent='✓ '+f.name+' ('+formatSize(f.size)+')';
+    document.getElementById('readyBadge').classList.add('show');
+    evalGenBtn();
+    toast('已选择：'+f.name,'success')
+}
+function clearVid(){
+    S.vid=null;document.getElementById('vFileInput').value='';
+    document.getElementById('uploadArea').classList.remove('ready');
+    document.getElementById('uploadText').textContent='点击上传视频文件';
+    document.getElementById('readyBadge').classList.remove('show');
+    evalGenBtn()
+}
+function formatSize(b){return b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+
+// ==================== Gen Button State ====================
+function evalGenBtn(){
+    const btn=document.getElementById('genBtn');
+    let ready=false;
+    if(S.tab==='text'){if(document.getElementById('promptInput').value.trim().length>0)ready=true}
+    else{if(S.vid)ready=true}
+    btn.classList.toggle('ready',ready);
+    btn.style.cursor=ready?'pointer':'not-allowed'
+}
+document.addEventListener('DOMContentLoaded',()=>{
+    document.getElementById('promptInput').addEventListener('input',evalGenBtn);
+});
+
+// ==================== Generate Click ====================
+function onGenClick(btn){
+    if(!S.firstVisitDone){showOv('termsModal');return}
+    if(!btn.classList.contains('ready')){
+        toast(S.tab==='text'?'请先输入 Prompt':'请先上传视频','error');return
+    }
+    startLoading()
+}
+
+// ==================== Loading: exactly 5000ms 0→100% ====================
+let loadRAF=null,loadStart=0;
+
+function startLoading(){
+    loadStart=Date.now();
+    const t={id:S.qId++,label:S.tab==='text'
+        ?document.getElementById('promptInput').value.trim().substring(0,50)
+        :(S.vid?S.vid.name:'任务'),
+        status:'processing',pct:0,time:new Date().toLocaleString(),mode:S.tab
+    };
+    S.currentTask=t;S.queue.push(t);
+    updateQBadge();updateQP();
+    showOv('loadingOverlay');
+
+    const DURATION=5000;
+    function tick(){
+        const elapsed=Date.now()-loadStart;
+        const pct=Math.min((elapsed/DURATION)*100,100);
+        t.pct=Math.round(pct*10)/10;
+        document.getElementById('loadingPct').textContent='Import... '+Math.round(t.pct)+'%';
+        document.getElementById('loadingBar').style.width=t.pct+'%';
+        if(t.pct<100){loadRAF=requestAnimationFrame(tick)}else{finishLoadingFrontend()}
+    }
+    loadRAF=requestAnimationFrame(tick);
+
+    // Auto-clear video after submit
+    if(S.tab==='video'&&S.vid)setTimeout(clearVid,200);
+}
+
+function sendToBackground(){
+    cancelAnimationFrame(loadRAF);loadRAF=null;
+    hideOv('loadingOverlay');
+    if(S.currentTask)S.currentTask.inBg=true;
+    toast('任务已移至后台继续生成','info');
+    updateQBadge();updateQP();
+    if(S.currentTask)bgSim(S.currentTask.id)
+}
+
+// Frontend finish: float success → auto open preview page
+function finishLoadingFrontend(){
+    if(S.currentTask)S.currentTask.status='done';
+    updateQBadge();updateQP();
+    setTimeout(()=>{
+        hideOv('loadingOverlay');
+        showFloatSuccess();
+        // Auto-open preview page after short delay
+        setTimeout(()=>openPreviewPage(),900);
+    },400);
+}
+
+function bgSim(tid){
+    const t=S.queue.find(x=>x.id==tid);if(!t)return;
+    const s=t.pct||0,r=(100-s)*150,step=(100-s)/(r/1000);
+    let iv=setInterval(()=>{
+        t.pct=Math.min(Math.round((t.pct||0)+step*(Math.random()*2+0.5)),100);
+        if(t.pct>=100){clearInterval(iv);t.status='done';t.pct=100;t.inBg=false;showFloatSuccess()}
+        updateQBadge();updateQP();
+    },1000+Math.random()*1000)
+}
+
+// ==================== Overlays ====================
+function showOv(id){document.getElementById(id).classList.add('show')}
+function hideOv(id){document.getElementById(id).classList.remove('show')}
+
+function acceptTerms(){S.termsOK=true;S.firstVisitDone=true;localStorage.setItem('mg_v4_terms','true');hideOv('termsModal');toast('创作者须知已确认','success')}
+function openHelpModal(){document.getElementById('helpModal').classList.add('show')}
+function closeHelpModal(){document.getElementById('helpModal').classList.remove('show')}
+
+// ==================== Queue Panel ====================
+function openQueuePanel(){updateQP();showOv('queuePanel')}
+function closeQueuePanel(){hideOv('queuePanel')}
+function updateQBadge(){document.getElementById('queueCount').textContent=S.queue.length}
+function updateQP(){
+    const body=document.getElementById('qpBody');
+    const n=S.queue.filter(x=>x).length;
+    document.getElementById('qpCounter').textContent=n+' / '+n;
+    if(!n){body.innerHTML='<div style="text-align:center;padding:60px;color:var(--t2);font-size:14px">队列为空</div>';return}
+    body.innerHTML=S.queue.map(t=>{
+        const ic=t.mode==='video'?'🤖':'📝';
+        if(t.status==='done'){
+            return '<div class="q-item"><div class="q-thumb">'+ic+'</div><div class="q-info"><div class="q-type-row"><span class="q-badge">MOTION ACTION</span><span class="q-detail-link">Details</span></div><div class="q-desc">'+t.label+'</div><div class="q-time">'+t.time+'</div></div><div class="q-actions"><button class="q-action-btn q-del" onclick="delTask('+t.id+')">DELETE</button><button class="q-action-btn q-prev" onclick="openPreviewPage('+t.id+')">PREVIEW</button></div></div>'
+        }else{
+            return '<div class="q-item"><div class="q-thumb">'+ic+'</div><div class="q-info"><div class="q-type-row"><span class="q-badge">MOTION ACTION</span><span class="q-detail-link">Details</span></div><div class="q-desc">'+t.label+(t.inBg?' (后台)':'')+'</div><div class="q-time">'+t.time+'</div></div><div class="q-progress-col"><div class="q-pbar"><div class="q-pfill" style="width:'+((t.pct||0))+'%"></div></div><span class="q-pct">Import... '+(t.pct||0).toFixed(1)+'%</span></div></div>'
+        }
+    }).join('')
+}
+function delTask(id){const i=S.queue.findIndex(x=>x.id==id);if(i>-1)S.queue.splice(i,1);updateQBadge();updateQP();toast('已删除','info')}
+
+// ==================== PREVIEW PAGE (Generate Preview) ====================
+function openPreviewPage(taskId){
+    showFloatSuccess();
+    // Use slight delay so preview opens after float starts animating
+    setTimeout(()=>{
+        document.getElementById('previewPage').classList.add('show');
+    },300);
+}
+
+function closePreviewPage(){
+    document.getElementById('previewPage').classList.remove('show');
+}
+
+// ==================== SAVE MODAL (Add To Library) ====================
+function openSaveModal(){
+    document.getElementById('saveModalOverlay').classList.add('show');
+    // Focus & clear placeholder-like behavior
+    const inp=document.getElementById('saveNameInput');
+    inp.value='';
+    inp.focus();
+}
+function closeSaveModal(){
+    document.getElementById('saveModalOverlay').classList.remove('show');
+}
+function confirmSave(){
+    const name=document.getElementById('saveNameInput').value.trim();
+    if(!name){toast('请输入动作名称','error');return}
+    closeSaveModal();
+    toast('已保存：'+name,'success');
+}
+
+// ==================== Float Success Text ====================
+function showFloatSuccess(){
+    const el=document.createElement('div');
+    el.className='float-success';
+    el.innerHTML='<div class="float-inner"><div class="float-text">SUCCESSFULLY GENERATED</div></div>';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),2400);
+}
+
+// Toast
+function toast(msg,type='info'){
+    const c=document.getElementById('toastContainer');
+    const icons={success:'✅',error:'❌',info:'ℹ️'};
+    const d=document.createElement('div');d.className='toast '+(type||'info');
+    d.innerHTML='<span class="toast-icon">'+(icons[type]||icons.info)+'</span><span>'+msg+'</span>';
+    c.appendChild(d);
+    setTimeout(()=>{d.classList.add('removing');setTimeout(()=>d.remove(),300)},2500)
+}
+</script>
+</body>
+</html>
